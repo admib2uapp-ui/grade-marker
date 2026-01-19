@@ -14,7 +14,7 @@ export const analyzeAnswer = async (
   studentAnswerImages: string[]
 ): Promise<AIResponse> => {
   const ai = getAI();
-  
+
   const markingCriteriaString = assignment.markingPoints
     .map((m, i) => `${i + 1}. ${m.point} (Weight: ${m.weight})`)
     .join("\n");
@@ -35,12 +35,15 @@ export const analyzeAnswer = async (
     5. JSON FORMAT: Output must be valid JSON matching the schema.
   `;
 
-  const teacherParts = assignment.teacherAnswerImages?.map(img => ({
-    inlineData: {
-      mimeType: getMimeType(img),
-      data: img.split(',')[1]
-    }
-  })) || [{ text: "Use marking criteria as the only reference." }];
+  // Use base64 data if available, otherwise fallback to text
+  const teacherParts = assignment.teacherAnswerImagesBase64 && assignment.teacherAnswerImagesBase64.length > 0
+    ? assignment.teacherAnswerImagesBase64.map(img => ({
+      inlineData: {
+        mimeType: getMimeType(img),
+        data: img.split(',')[1]
+      }
+    }))
+    : [{ text: "Use marking criteria as the only reference." }];
 
   const studentParts = studentAnswerImages.map(img => ({
     inlineData: {
@@ -66,7 +69,7 @@ export const analyzeAnswer = async (
           score: { type: Type.NUMBER },
           totalPossible: { type: Type.NUMBER },
           feedback: { type: Type.STRING },
-          criteriasMet: { 
+          criteriasMet: {
             type: Type.ARRAY,
             items: { type: Type.BOOLEAN }
           }
@@ -88,11 +91,11 @@ export const analyzeAnswer = async (
 export const extractMarkingPoints = async (images: string[]): Promise<string[]> => {
   const ai = getAI();
   const prompt = "Look at these solution files (images/PDFs) provided in order and list the specific marking points (e.g., 'Correct formula', 'Substitution', 'Final answer'). Return as a JSON array of strings.";
-  
+
   const imageParts = images.map(img => ({
-    inlineData: { 
-      mimeType: getMimeType(img), 
-      data: img.split(',')[1] 
+    inlineData: {
+      mimeType: getMimeType(img),
+      data: img.split(',')[1]
     }
   }));
 
@@ -115,4 +118,98 @@ export const extractMarkingPoints = async (images: string[]): Promise<string[]> 
 
   const text = response.text || "[]";
   return JSON.parse(text);
+};
+
+export interface NoteSectionDraft {
+  title: string;
+  question: string;
+  markingPoints: { point: string; weight: number }[];
+}
+
+export interface NoteAnalysisResult {
+  noteSummary: string;
+  sections: NoteSectionDraft[];
+}
+
+export const analyzeTeachingNote = async (
+  noteFilesBase64: string[],
+  context: { subjectName: string; className: string },
+  teacherPrompt?: string
+): Promise<NoteAnalysisResult> => {
+  const ai = getAI();
+
+  const prompt = `
+    You are an expert teacher assistant.
+    Analyze the provided teaching note (PDF/images). Summarize the note for teacher review and then split it into clear instructional sections.
+    For each section, create a draft assignment with:
+    - title: short, specific
+    - question: clear student-facing prompt
+    - markingPoints: 3-6 criteria, each with { point, weight } where weight is an integer.
+
+    Context:
+    Subject: ${context.subjectName}
+    Class: ${context.className}
+
+    Return JSON strictly matching the schema.
+
+    Additional teacher prompt (optional):
+    ${teacherPrompt || 'None'}
+  `;
+
+  const noteParts = noteFilesBase64.map(file => ({
+    inlineData: {
+      mimeType: getMimeType(file),
+      data: file.split(',')[1]
+    }
+  }));
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: {
+      parts: [
+        { text: prompt },
+        ...noteParts
+      ]
+    },
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          noteSummary: { type: Type.STRING },
+          sections: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                title: { type: Type.STRING },
+                question: { type: Type.STRING },
+                markingPoints: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      point: { type: Type.STRING },
+                      weight: { type: Type.NUMBER }
+                    },
+                    required: ["point", "weight"]
+                  }
+                }
+              },
+              required: ["title", "question", "markingPoints"]
+            }
+          }
+        },
+        required: ["noteSummary", "sections"]
+      }
+    }
+  });
+
+  try {
+    const text = response.text || "{}";
+    return JSON.parse(text) as NoteAnalysisResult;
+  } catch (e) {
+    console.error("Failed to parse note analysis response", e);
+    throw new Error("AI note analysis failed.");
+  }
 };

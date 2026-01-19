@@ -1,36 +1,60 @@
-
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartGrader AI</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            colors: {
-              // Custom colors if needed
-            }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartGrader AI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            // Custom colors if needed
           }
         }
       }
-    </script>
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer components {
+        .input-style {
+          @apply w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-900 
+                 focus:ring-2 focus:ring-indigo-500 outline-none transition-all
+                 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-400;
+        }
+        .input-style-sm {
+          @apply w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 
+                 focus:ring-2 focus:ring-indigo-500 outline-none transition-all
+                 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-400;
+        }
+        select {
+          @apply bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-200 border-slate-200 dark:border-slate-600;
+        }
+      }
+
+    </style>
+  <!-- 
 <script type="importmap">
 {
   "imports": {
     "react": "https://esm.sh/react@^19.2.3",
     "react/": "https://esm.sh/react@^19.2.3/",
     "@google/genai": "https://esm.sh/@google/genai@^1.37.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+    "react-dom": "https://esm.sh/react-dom@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react-router-dom": "https://esm.sh/react-router-dom@^6.22.3"
   }
 }
 </script>
+-->
 </head>
-<body class="bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+
+<body class="bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-slate-900 dark:text-slate-200">
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
 </body>
+
 </html>
